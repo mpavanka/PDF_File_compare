@@ -1,0 +1,442 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Comparison: SHYAM.pdf vs SHYAM.pdf</title>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 30px; }
+        .header h1 { font-size: 20px; margin-bottom: 8px; }
+        .stats-bar { background: white; padding: 15px 30px; display: flex; gap: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); align-items: center; }
+        .stat-item { display: flex; align-items: center; gap: 8px; }
+        .stat-label { font-weight: 600; color: #666; font-size: 13px; }
+        .stat-value { font-weight: bold; font-size: 16px; }
+        .stat-value.added { color: #22c55e; }
+        .stat-value.removed { color: #ef4444; }
+        .stat-value.changed { color: #f59e0b; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-secondary { background: #e5e7eb; color: #374151; }
+        .btn-secondary:hover { background: #d1d5db; }
+        .btn-secondary.active { background: #667eea; color: white; }
+        .comparison-container { display: flex; height: calc(100vh - 150px); }
+        .side { flex: 1; display: flex; flex-direction: column; background: white; border-right: 2px solid #e5e7eb; }
+        .side:last-child { border-right: none; }
+        .side-header { padding: 12px 15px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; font-weight: 600; font-size: 13px; }
+        .side-content { flex: 1; overflow-y: auto; font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; line-height: 1.5; }
+        .line { display: flex; padding: 2px 0; min-height: 20px; }
+        .line-number { width: 50px; padding: 0 10px; text-align: right; color: #9ca3af; user-select: none; background: #f9fafb; border-right: 1px solid #e5e7eb; flex-shrink: 0; }
+        .line-content { padding: 0 10px; flex: 1; white-space: pre-wrap; word-break: break-word; }
+        .line.equal { background: white; }
+        .line.added { background: #d1fae5; }
+        .line.added .line-number { background: #a7f3d0; color: #065f46; font-weight: 600; }
+        .line.deleted { background: #fee2e2; }
+        .line.deleted .line-number { background: #fecaca; color: #991b1b; font-weight: 600; }
+        .line.changed { background: #fef3c7; }
+        .line.changed .line-number { background: #fde68a; color: #92400e; font-weight: 600; }
+        .page-separator { background: #6366f1; color: white; padding: 8px 15px; font-weight: 600; font-size: 12px; position: sticky; top: 0; z-index: 10; }
+    </style>
+
+</head>
+<body>
+    <div class="header">
+        <h1>📊 PDF Comparison Report</h1>
+        <div style="font-size: 13px; opacity: 0.9;">SHYAM.pdf ↔ SHYAM.pdf</div>
+    </div>
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-label">Pages:</span>
+            <span class="stat-value">1</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Differences:</span>
+            <span class="stat-value changed">36</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Added:</span>
+            <span class="stat-value added">+0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Removed:</span>
+            <span class="stat-value removed">-0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Changed:</span>
+            <span class="stat-value changed">~36</span>
+        </div>
+        <div style="flex: 1;"></div>
+        <button class="btn btn-secondary" onclick="toggleDifferences()" id="toggleBtn">
+            Show Only Differences
+        </button>
+        <button class="btn btn-primary" onclick="window.print()" style="margin-left: 10px;">
+            Print
+        </button>
+    </div>
+
+    <div class="comparison-container">
+        <div class="side">
+            <div class="side-header">📄 SHYAM.pdf</div>
+            <div class="side-content">
+<div class="page-separator">Page 1</div>
+<div class="line equal">
+                    <div class="line-number">1</div>
+                    <div class="line-content">SINGU SHYAM</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">2</div>
+                    <div class="line-content">Warangal, Telangana</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">3</div>
+                    <div class="line-content">singushyam@gmail.com — 9390847345</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">4</div>
+                    <div class="line-content">Professional Summary</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">5</div>
+                    <div class="line-content">Motivated and detail-oriented Chemistry postgraduate student specializing in Analytical Chemistry. Strong aca-</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">6</div>
+                    <div class="line-content">demic background with hands-on knowledge of analytical instruments, laboratory practices, and problem-solving</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">7</div>
+                    <div class="line-content">techniques. Seeking an entry-level opportunity to contribute to a professional and growth-oriented organization.</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">8</div>
+                    <div class="line-content">Education</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">9</div>
+                    <div class="line-content">M.Sc. Analytical Chemistry (Pursuing)</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">10</div>
+                    <div class="line-content">Keshav Memorial Institute of Commerce and Sciences CGPA: 6.50</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">11</div>
+                    <div class="line-content">B.Sc. (MCCS)</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">12</div>
+                    <div class="line-content">Siddartha College, Affiliated to Kakatiya University CGPA: 7.08</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">13</div>
+                    <div class="line-content">Intermediate (MPC)</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">14</div>
+                    <div class="line-content">Telangana Model College, Warangal Marks: 652</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">15</div>
+                    <div class="line-content">SSC</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">16</div>
+                    <div class="line-content">ZPP Secondary School, Warangal GPA: 8.3</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">17</div>
+                    <div class="line-content">Technical Skills</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">18</div>
+                    <div class="line-content">• Analytical Chemistry fundamentals</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">19</div>
+                    <div class="line-content">• Laboratory equipment handling</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">20</div>
+                    <div class="line-content">• Analytical instruments knowledge</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">21</div>
+                    <div class="line-content">• Problem-solving and data interpretation</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">22</div>
+                    <div class="line-content">• Good verbal and written communication</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">23</div>
+                    <div class="line-content">Core Strengths</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">24</div>
+                    <div class="line-content">• Hard-working and disciplined</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">25</div>
+                    <div class="line-content">• Strong analytical thinking</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">26</div>
+                    <div class="line-content">• Leadership and team coordination</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">27</div>
+                    <div class="line-content">• Quick learner with adaptability</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">28</div>
+                    <div class="line-content">Team Leadership</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">29</div>
+                    <div class="line-content">• Team management</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">30</div>
+                    <div class="line-content">• Collaborative working</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">31</div>
+                    <div class="line-content">• Responsibility ownership</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">32</div>
+                    <div class="line-content">Additional Information</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">33</div>
+                    <div class="line-content">Languages: Telugu (Native), English</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">34</div>
+                    <div class="line-content">Hobbies: Playing Cricket and Volleyball</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">35</div>
+                    <div class="line-content">Declaration</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">36</div>
+                    <div class="line-content">I hereby declare that the information provided above is true and correct to the best of my knowledge.</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">37</div>
+                    <div class="line-content">1</div>
+                </div>
+
+            </div>
+        </div>
+        <div class="side">
+            <div class="side-header">📄 SHYAM.pdf</div>
+            <div class="side-content">
+<div class="page-separator">Page 1</div>
+<div class="line equal">
+                    <div class="line-number">1</div>
+                    <div class="line-content">SINGU SHYAM</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">2</div>
+                    <div class="line-content">Phone: 9390847345</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">3</div>
+                    <div class="line-content">Email: singushyam@gmail.com</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">4</div>
+                    <div class="line-content">Location: Warangal, Telangana</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">5</div>
+                    <div class="line-content">PROFESSIONAL SUMMARY</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">6</div>
+                    <div class="line-content">Motivated and detail-oriented Chemistry postgraduate student with strong analytical skills.</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">7</div>
+                    <div class="line-content">EDUCATION</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">8</div>
+                    <div class="line-content">M.Sc Analytical Chemistry (Pursuing) – Keshav Memorial Institute of Commerce and Sciences</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">9</div>
+                    <div class="line-content">B.Sc (MCCS) – Siddartha College, Kakatiya University</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">10</div>
+                    <div class="line-content">SKILLS</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">11</div>
+                    <div class="line-content">Analytical Skills, Equipment Handling, Communication, Problem Solving</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">12</div>
+                    <div class="line-content">DECLARATION</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number">13</div>
+                    <div class="line-content">I hereby declare that the above information is true to the best of my knowledge.</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+<div class="line changed">
+                    <div class="line-number"></div>
+                    <div class="line-content">&nbsp;</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Synchronized scrolling
+        const leftContent = document.querySelector('.side:first-child .side-content');
+        const rightContent = document.querySelector('.side:last-child .side-content');
+        let isLeftScrolling = false, isRightScrolling = false;
+        
+        leftContent.addEventListener('scroll', function() {
+            if (!isRightScrolling) {
+                isLeftScrolling = true;
+                rightContent.scrollTop = leftContent.scrollTop;
+                setTimeout(() => { isLeftScrolling = false; }, 100);
+            }
+        });
+        
+        rightContent.addEventListener('scroll', function() {
+            if (!isLeftScrolling) {
+                isRightScrolling = true;
+                leftContent.scrollTop = rightContent.scrollTop;
+                setTimeout(() => { isRightScrolling = false; }, 100);
+            }
+        });
+        
+        // Toggle differences
+        let showingOnlyDiffs = false;
+        function toggleDifferences() {
+            const btn = document.getElementById('toggleBtn');
+            const lines = document.querySelectorAll('.line');
+            
+            showingOnlyDiffs = !showingOnlyDiffs;
+            
+            if (showingOnlyDiffs) {
+                lines.forEach(line => {
+                    if (line.classList.contains('equal')) {
+                        line.style.display = 'none';
+                    }
+                });
+                btn.textContent = 'Show All Lines';
+                btn.classList.add('active');
+            } else {
+                lines.forEach(line => {
+                    line.style.display = 'flex';
+                });
+                btn.textContent = 'Show Only Differences';
+                btn.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>

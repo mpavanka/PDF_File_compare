@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Batch Comparison Summary</title>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header-info { font-size: 14px; opacity: 0.9; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding: 30px; background: #f9fafb; }
+        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .stat-label { color: #6b7280; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+        .stat-value { font-size: 32px; font-weight: bold; color: #1f2937; }
+        .stat-value.success { color: #10b981; }
+        .stat-value.warning { color: #f59e0b; }
+        .stat-value.danger { color: #ef4444; }
+        .stat-value.info { color: #3b82f6; }
+        .results-section { padding: 30px; }
+        .section-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+        .filter-buttons { margin: 20px 0; display: flex; gap: 10px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .btn-secondary { background: #e5e7eb; color: #374151; }
+        .btn-secondary:hover { background: #d1d5db; }
+        .btn-secondary.active { background: #667eea; color: white; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .results-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .results-table th { background: #f9fafb; padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; font-size: 13px; }
+        .results-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+        .results-table tr:hover { background: #f9fafb; }
+        .file-name { font-family: 'Consolas', monospace; font-size: 12px; color: #4b5563; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .status-badge.identical { background: #d1fae5; color: #065f46; }
+        .status-badge.different { background: #fee2e2; color: #991b1b; }
+        .status-badge.missing { background: #fef3c7; color: #92400e; }
+        .diff-count { font-weight: 600; }
+        .diff-count.zero { color: #10b981; }
+        .diff-count.low { color: #f59e0b; }
+        .diff-count.high { color: #ef4444; }
+        .btn-details { padding: 6px 12px; font-size: 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+        .btn-details:hover { background: #5568d3; }
+        .btn-toggle { padding: 6px 12px; font-size: 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; margin-right: 8px; }
+        .btn-toggle:hover { background: #059669; }
+        .btn-toggle.active { background: #f59e0b; }
+        .btn-close { padding: 6px 12px; font-size: 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+        .btn-close:hover { background: #dc2626; }
+        .detail-row td { padding: 0 !important; background: #f9fafb; }
+        .detail-container { padding: 0; background: white; }
+        .detail-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 0; border-bottom: 2px solid #e5e7eb; background: #f9fafb; }
+        .detail-header h3 { margin: 0; color: #374151; font-size: 15px; font-weight: 600; }
+        
+        /* Unified comparison with single scrollbar */
+        .unified-comparison { display: grid; grid-template-columns: 1fr 1fr; height: 70vh; max-height: 700px; overflow: hidden; border: 1px solid #e5e7eb; }
+        .comparison-side { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid #e5e7eb; }
+        .comparison-side:last-child { border-right: none; }
+        .side-title { background: #374151; color: white; padding: 12px 15px; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+        .diff-content { flex: 1; overflow-y: auto; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; line-height: 1.6; background: #fefefe; }
+        
+        /* Synchronized scrolling */
+        .unified-comparison .diff-content { scrollbar-width: thin; scrollbar-color: #9ca3af #f3f4f6; }
+        .unified-comparison .diff-content::-webkit-scrollbar { width: 8px; }
+        .unified-comparison .diff-content::-webkit-scrollbar-track { background: #f3f4f6; }
+        .unified-comparison .diff-content::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+        .unified-comparison .diff-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        .page-header { background: #6366f1; color: white; padding: 8px 15px; font-weight: 600; font-size: 12px; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .diff-line { display: flex; padding: 6px 0; min-height: 28px; border-bottom: 1px solid #f3f4f6; }
+        .diff-line.added { background: #d1fae5; border-left: 3px solid #10b981; }
+        .diff-line.deleted { background: #fee2e2; border-left: 3px solid #ef4444; }
+        .diff-line.changed { background: #fef3c7; border-left: 3px solid #f59e0b; }
+        .diff-line.equal { background: white; border-left: 3px solid transparent; }
+        .line-num { width: 50px; padding: 0 10px; text-align: right; color: #6b7280; font-weight: 600; flex-shrink: 0; background: rgba(249,250,251,0.8); font-size: 11px; }
+        .line-text { padding: 0 15px; flex: 1; word-break: break-word; white-space: pre-wrap; }
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 SI REPORT VALIDATIONS</h1>
+            <div class="header-info">Generated on 2026-03-07 12:44:54</div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Comparisons</div>
+                <div class="stat-value info">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Files with Differences</div>
+                <div class="stat-value danger">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Identical Files</div>
+                <div class="stat-value success">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Differences</div>
+                <div class="stat-value warning">72</div>
+            </div>
+        </div>
+        <div class="results-section">
+            <h2 class="section-title">Comparison Results</h2>
+            <div class="filter-buttons">
+                <button class="btn btn-secondary active" onclick="filterResults('all')">Show All</button>
+                <button class="btn btn-secondary" onclick="filterResults('different')">Show Only Differences</button>
+                <button class="btn btn-secondary" onclick="filterResults('identical')">Show Only Identical</button>
+            </div>
+
+            <table class="results-table" id="resultsTable">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>File 1</th>
+                        <th>File 2</th>
+                        <th style="width:100px;">Status</th>
+                        <th style="width:80px;">Pages</th>
+                        <th style="width:100px;">Differences</th>
+                        <th style="width:80px;">+Lines</th>
+                        <th style="width:80px;">-Lines</th>
+                        <th style="width:80px;">~Lines</th>
+                        <th style="width:120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr class="result-row different">
+                        <td>1</td>
+                        <td class="file-name">SHYAM.pdf</td>
+                        <td class="file-name">SHYAM.pdf</td>
+                        <td><span class="status-badge different">Different</span></td>
+                        <td>1</td>
+                        <td><span class="diff-count high">36</span></td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td><span class="diff-count low">~36</span></td>
+                        <td><button class="btn btn-details" onclick="toggleDetails(1)">Show All Changes</button></td>
+                    </tr>
+
+                    <tr class="detail-row" id="detail-1" style="display:none;">
+                        <td colspan="10">
+                            <div class="detail-container">
+            <div class="detail-header">
+                <h3>📄 SHYAM.pdf ↔ SHYAM.pdf</h3>
+                <div>
+                    <button class="btn btn-toggle" onclick="toggleAllLines(1)" id="toggle-1">Show All Lines</button>
+                    <button class="btn btn-close" onclick="toggleDetails(1)">Close</button>
+                </div>
+            </div>
+        <div class="unified-comparison" id="comparison-1"><div class="comparison-side"><div class="side-title">📄 Original: SHYAM.pdf</div><div class="diff-content"><div class="page-header">Page 1</div><div class="diff-line equal equal-line" style="display:none;"><span class="line-num">1</span><span class="line-text">SINGU SHYAM</span></div><div class="diff-line changed " style=""><span class="line-num">2</span><span class="line-text">Warangal, Telangana</span></div><div class="diff-line changed " style=""><span class="line-num">3</span><span class="line-text">singushyam@gmail.com — 9390847345</span></div><div class="diff-line changed " style=""><span class="line-num">4</span><span class="line-text">Professional Summary</span></div><div class="diff-line changed " style=""><span class="line-num">5</span><span class="line-text">Motivated and detail-oriented Chemistry postgraduate student specializing in Analytical Chemistry. Strong aca-</span></div><div class="diff-line changed " style=""><span class="line-num">6</span><span class="line-text">demic background with hands-on knowledge of analytical instruments, laboratory practices, and problem-solving</span></div><div class="diff-line changed " style=""><span class="line-num">7</span><span class="line-text">techniques. Seeking an entry-level opportunity to contribute to a professional and growth-oriented organization.</span></div><div class="diff-line changed " style=""><span class="line-num">8</span><span class="line-text">Education</span></div><div class="diff-line changed " style=""><span class="line-num">9</span><span class="line-text">M.Sc. Analytical Chemistry (Pursuing)</span></div><div class="diff-line changed " style=""><span class="line-num">10</span><span class="line-text">Keshav Memorial Institute of Commerce and Sciences CGPA: 6.50</span></div><div class="diff-line changed " style=""><span class="line-num">11</span><span class="line-text">B.Sc. (MCCS)</span></div><div class="diff-line changed " style=""><span class="line-num">12</span><span class="line-text">Siddartha College, Affiliated to Kakatiya University CGPA: 7.08</span></div><div class="diff-line changed " style=""><span class="line-num">13</span><span class="line-text">Intermediate (MPC)</span></div><div class="diff-line changed " style=""><span class="line-num">14</span><span class="line-text">Telangana Model College, Warangal Marks: 652</span></div><div class="diff-line changed " style=""><span class="line-num">15</span><span class="line-text">SSC</span></div><div class="diff-line changed " style=""><span class="line-num">16</span><span class="line-text">ZPP Secondary School, Warangal GPA: 8.3</span></div><div class="diff-line changed " style=""><span class="line-num">17</span><span class="line-text">Technical Skills</span></div><div class="diff-line changed " style=""><span class="line-num">18</span><span class="line-text">• Analytical Chemistry fundamentals</span></div><div class="diff-line changed " style=""><span class="line-num">19</span><span class="line-text">• Laboratory equipment handling</span></div><div class="diff-line changed " style=""><span class="line-num">20</span><span class="line-text">• Analytical instruments knowledge</span></div><div class="diff-line changed " style=""><span class="line-num">21</span><span class="line-text">• Problem-solving and data interpretation</span></div><div class="diff-line changed " style=""><span class="line-num">22</span><span class="line-text">• Good verbal and written communication</span></div><div class="diff-line changed " style=""><span class="line-num">23</span><span class="line-text">Core Strengths</span></div><div class="diff-line changed " style=""><span class="line-num">24</span><span class="line-text">• Hard-working and disciplined</span></div><div class="diff-line changed " style=""><span class="line-num">25</span><span class="line-text">• Strong analytical thinking</span></div><div class="diff-line changed " style=""><span class="line-num">26</span><span class="line-text">• Leadership and team coordination</span></div><div class="diff-line changed " style=""><span class="line-num">27</span><span class="line-text">• Quick learner with adaptability</span></div><div class="diff-line changed " style=""><span class="line-num">28</span><span class="line-text">Team Leadership</span></div><div class="diff-line changed " style=""><span class="line-num">29</span><span class="line-text">• Team management</span></div><div class="diff-line changed " style=""><span class="line-num">30</span><span class="line-text">• Collaborative working</span></div><div class="diff-line changed " style=""><span class="line-num">31</span><span class="line-text">• Responsibility ownership</span></div><div class="diff-line changed " style=""><span class="line-num">32</span><span class="line-text">Additional Information</span></div><div class="diff-line changed " style=""><span class="line-num">33</span><span class="line-text">Languages: Telugu (Native), English</span></div><div class="diff-line changed " style=""><span class="line-num">34</span><span class="line-text">Hobbies: Playing Cricket and Volleyball</span></div><div class="diff-line changed " style=""><span class="line-num">35</span><span class="line-text">Declaration</span></div><div class="diff-line changed " style=""><span class="line-num">36</span><span class="line-text">I hereby declare that the information provided above is true and correct to the best of my knowledge.</span></div><div class="diff-line changed " style=""><span class="line-num">37</span><span class="line-text">1</span></div></div></div><div class="comparison-side"><div class="side-title">📄 Modified: SHYAM.pdf</div><div class="diff-content"><div class="page-header">Page 1</div><div class="diff-line equal equal-line" style="display:none;"><span class="line-num">1</span><span class="line-text">SINGU SHYAM</span></div><div class="diff-line changed " style=""><span class="line-num">2</span><span class="line-text">Phone: 9390847345</span></div><div class="diff-line changed " style=""><span class="line-num">3</span><span class="line-text">Email: singushyam@gmail.com</span></div><div class="diff-line changed " style=""><span class="line-num">4</span><span class="line-text">Location: Warangal, Telangana</span></div><div class="diff-line changed " style=""><span class="line-num">5</span><span class="line-text">PROFESSIONAL SUMMARY</span></div><div class="diff-line changed " style=""><span class="line-num">6</span><span class="line-text">Motivated and detail-oriented Chemistry postgraduate student with strong analytical skills.</span></div><div class="diff-line changed " style=""><span class="line-num">7</span><span class="line-text">EDUCATION</span></div><div class="diff-line changed " style=""><span class="line-num">8</span><span class="line-text">M.Sc Analytical Chemistry (Pursuing) – Keshav Memorial Institute of Commerce and Sciences</span></div><div class="diff-line changed " style=""><span class="line-num">9</span><span class="line-text">B.Sc (MCCS) – Siddartha College, Kakatiya University</span></div><div class="diff-line changed " style=""><span class="line-num">10</span><span class="line-text">SKILLS</span></div><div class="diff-line changed " style=""><span class="line-num">11</span><span class="line-text">Analytical Skills, Equipment Handling, Communication, Problem Solving</span></div><div class="diff-line changed " style=""><span class="line-num">12</span><span class="line-text">DECLARATION</span></div><div class="diff-line changed " style=""><span class="line-num">13</span><span class="line-text">I hereby declare that the above information is true to the best of my knowledge.</span></div></div></div></div></div>
+                        </td>
+                    </tr>
+
+                    <tr class="result-row different">
+                        <td>2</td>
+                        <td class="file-name">Singu_Shyam_Resume.pdf</td>
+                        <td class="file-name">Singu_Shyam_Resume.pdf</td>
+                        <td><span class="status-badge different">Different</span></td>
+                        <td>1</td>
+                        <td><span class="diff-count high">36</span></td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td><span class="diff-count low">~36</span></td>
+                        <td><button class="btn btn-details" onclick="toggleDetails(2)">Show All Changes</button></td>
+                    </tr>
+
+                    <tr class="detail-row" id="detail-2" style="display:none;">
+                        <td colspan="10">
+                            <div class="detail-container">
+            <div class="detail-header">
+                <h3>📄 Singu_Shyam_Resume.pdf ↔ Singu_Shyam_Resume.pdf</h3>
+                <div>
+                    <button class="btn btn-toggle" onclick="toggleAllLines(2)" id="toggle-2">Show All Lines</button>
+                    <button class="btn btn-close" onclick="toggleDetails(2)">Close</button>
+                </div>
+            </div>
+        <div class="unified-comparison" id="comparison-2"><div class="comparison-side"><div class="side-title">📄 Original: Singu_Shyam_Resume.pdf</div><div class="diff-content"><div class="page-header">Page 1</div><div class="diff-line equal equal-line" style="display:none;"><span class="line-num">1</span><span class="line-text">SINGU SHYAM</span></div><div class="diff-line changed " style=""><span class="line-num">2</span><span class="line-text">Phone: 9390847345</span></div><div class="diff-line changed " style=""><span class="line-num">3</span><span class="line-text">Email: singushyam@gmail.com</span></div><div class="diff-line changed " style=""><span class="line-num">4</span><span class="line-text">Location: Warangal, Telangana</span></div><div class="diff-line changed " style=""><span class="line-num">5</span><span class="line-text">PROFESSIONAL SUMMARY</span></div><div class="diff-line changed " style=""><span class="line-num">6</span><span class="line-text">Motivated and detail-oriented Chemistry postgraduate student with strong analytical skills.</span></div><div class="diff-line changed " style=""><span class="line-num">7</span><span class="line-text">EDUCATION</span></div><div class="diff-line changed " style=""><span class="line-num">8</span><span class="line-text">M.Sc Analytical Chemistry (Pursuing) – Keshav Memorial Institute of Commerce and Sciences</span></div><div class="diff-line changed " style=""><span class="line-num">9</span><span class="line-text">B.Sc (MCCS) – Siddartha College, Kakatiya University</span></div><div class="diff-line changed " style=""><span class="line-num">10</span><span class="line-text">SKILLS</span></div><div class="diff-line changed " style=""><span class="line-num">11</span><span class="line-text">Analytical Skills, Equipment Handling, Communication, Problem Solving</span></div><div class="diff-line changed " style=""><span class="line-num">12</span><span class="line-text">DECLARATION</span></div><div class="diff-line changed " style=""><span class="line-num">13</span><span class="line-text">I hereby declare that the above information is true to the best of my knowledge.</span></div></div></div><div class="comparison-side"><div class="side-title">📄 Modified: Singu_Shyam_Resume.pdf</div><div class="diff-content"><div class="page-header">Page 1</div><div class="diff-line equal equal-line" style="display:none;"><span class="line-num">1</span><span class="line-text">SINGU SHYAM</span></div><div class="diff-line changed " style=""><span class="line-num">2</span><span class="line-text">Warangal, Telangana</span></div><div class="diff-line changed " style=""><span class="line-num">3</span><span class="line-text">singushyam@gmail.com — 9390847345</span></div><div class="diff-line changed " style=""><span class="line-num">4</span><span class="line-text">Professional Summary</span></div><div class="diff-line changed " style=""><span class="line-num">5</span><span class="line-text">Motivated and detail-oriented Chemistry postgraduate student specializing in Analytical Chemistry. Strong aca-</span></div><div class="diff-line changed " style=""><span class="line-num">6</span><span class="line-text">demic background with hands-on knowledge of analytical instruments, laboratory practices, and problem-solving</span></div><div class="diff-line changed " style=""><span class="line-num">7</span><span class="line-text">techniques. Seeking an entry-level opportunity to contribute to a professional and growth-oriented organization.</span></div><div class="diff-line changed " style=""><span class="line-num">8</span><span class="line-text">Education</span></div><div class="diff-line changed " style=""><span class="line-num">9</span><span class="line-text">M.Sc. Analytical Chemistry (Pursuing)</span></div><div class="diff-line changed " style=""><span class="line-num">10</span><span class="line-text">Keshav Memorial Institute of Commerce and Sciences CGPA: 6.50</span></div><div class="diff-line changed " style=""><span class="line-num">11</span><span class="line-text">B.Sc. (MCCS)</span></div><div class="diff-line changed " style=""><span class="line-num">12</span><span class="line-text">Siddartha College, Affiliated to Kakatiya University CGPA: 7.08</span></div><div class="diff-line changed " style=""><span class="line-num">13</span><span class="line-text">Intermediate (MPC)</span></div><div class="diff-line changed " style=""><span class="line-num">14</span><span class="line-text">Telangana Model College, Warangal Marks: 652</span></div><div class="diff-line changed " style=""><span class="line-num">15</span><span class="line-text">SSC</span></div><div class="diff-line changed " style=""><span class="line-num">16</span><span class="line-text">ZPP Secondary School, Warangal GPA: 8.3</span></div><div class="diff-line changed " style=""><span class="line-num">17</span><span class="line-text">Technical Skills</span></div><div class="diff-line changed " style=""><span class="line-num">18</span><span class="line-text">• Analytical Chemistry fundamentals</span></div><div class="diff-line changed " style=""><span class="line-num">19</span><span class="line-text">• Laboratory equipment handling</span></div><div class="diff-line changed " style=""><span class="line-num">20</span><span class="line-text">• Analytical instruments knowledge</span></div><div class="diff-line changed " style=""><span class="line-num">21</span><span class="line-text">• Problem-solving and data interpretation</span></div><div class="diff-line changed " style=""><span class="line-num">22</span><span class="line-text">• Good verbal and written communication</span></div><div class="diff-line changed " style=""><span class="line-num">23</span><span class="line-text">Core Strengths</span></div><div class="diff-line changed " style=""><span class="line-num">24</span><span class="line-text">• Hard-working and disciplined</span></div><div class="diff-line changed " style=""><span class="line-num">25</span><span class="line-text">• Strong analytical thinking</span></div><div class="diff-line changed " style=""><span class="line-num">26</span><span class="line-text">• Leadership and team coordination</span></div><div class="diff-line changed " style=""><span class="line-num">27</span><span class="line-text">• Quick learner with adaptability</span></div><div class="diff-line changed " style=""><span class="line-num">28</span><span class="line-text">Team Leadership</span></div><div class="diff-line changed " style=""><span class="line-num">29</span><span class="line-text">• Team management</span></div><div class="diff-line changed " style=""><span class="line-num">30</span><span class="line-text">• Collaborative working</span></div><div class="diff-line changed " style=""><span class="line-num">31</span><span class="line-text">• Responsibility ownership</span></div><div class="diff-line changed " style=""><span class="line-num">32</span><span class="line-text">Additional Information</span></div><div class="diff-line changed " style=""><span class="line-num">33</span><span class="line-text">Languages: Telugu (Native), English</span></div><div class="diff-line changed " style=""><span class="line-num">34</span><span class="line-text">Hobbies: Playing Cricket and Volleyball</span></div><div class="diff-line changed " style=""><span class="line-num">35</span><span class="line-text">Declaration</span></div><div class="diff-line changed " style=""><span class="line-num">36</span><span class="line-text">I hereby declare that the information provided above is true and correct to the best of my knowledge.</span></div><div class="diff-line changed " style=""><span class="line-num">37</span><span class="line-text">1</span></div></div></div></div></div>
+                        </td>
+                    </tr>
+
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+    <script>
+        function filterResults(filter) {
+            const rows = document.querySelectorAll('.result-row');
+            const detailRows = document.querySelectorAll('.detail-row');
+            const buttons = document.querySelectorAll('.filter-buttons .btn-secondary');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            rows.forEach(row => {
+                if (filter === 'all') {
+                    row.style.display = '';
+                } else if (filter === 'different' && row.classList.contains('different')) {
+                    row.style.display = '';
+                } else if (filter === 'identical' && row.classList.contains('identical')) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // Hide all detail rows when filtering
+            detailRows.forEach(row => {
+                row.style.display = 'none';
+            });
+        }
+        
+        function toggleDetails(idx) {
+            const detailRow = document.getElementById('detail-' + idx);
+            const isVisible = detailRow.style.display !== 'none';
+            
+            // Hide all other detail rows first
+            document.querySelectorAll('.detail-row').forEach(row => {
+                row.style.display = 'none';
+            });
+            
+            // Toggle this one
+            if (!isVisible) {
+                detailRow.style.display = '';
+                // Scroll to view
+                setTimeout(() => {
+                    detailRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+        }
+        
+        function toggleAllLines(idx) {
+            const btn = document.getElementById('toggle-' + idx);
+            const comparison = document.getElementById('comparison-' + idx);
+            
+            if (!comparison) return;
+            
+            const equalLines = comparison.querySelectorAll('.equal-line');
+            const isShowingAll = btn.textContent === 'Show Only Differences';
+            
+            if (isShowingAll) {
+                equalLines.forEach(line => line.style.display = 'none');
+                btn.textContent = 'Show All Lines';
+                btn.classList.remove('active');
+            } else {
+                equalLines.forEach(line => line.style.display = 'flex');
+                btn.textContent = 'Show Only Differences';
+                btn.classList.add('active');
+            }
+        }
+        
+        // Synchronized scrolling for side-by-side view
+        document.addEventListener('DOMContentLoaded', function() {
+            setupSyncScroll();
+        });
+        
+        function setupSyncScroll() {
+            const detailRows = document.querySelectorAll('.detail-row');
+            detailRows.forEach((row, idx) => {
+                const comparison = row.querySelector('.unified-comparison');
+                if (!comparison) return;
+                
+                const sides = comparison.querySelectorAll('.diff-content');
+                if (sides.length !== 2) return;
+                
+                const [left, right] = sides;
+                let isLeftScrolling = false;
+                let isRightScrolling = false;
+                
+                left.addEventListener('scroll', function() {
+                    if (!isRightScrolling) {
+                        isLeftScrolling = true;
+                        right.scrollTop = left.scrollTop;
+                        setTimeout(() => { isLeftScrolling = false; }, 100);
+                    }
+                });
+                
+                right.addEventListener('scroll', function() {
+                    if (!isLeftScrolling) {
+                        isRightScrolling = true;
+                        left.scrollTop = right.scrollTop;
+                        setTimeout(() => { isRightScrolling = false; }, 100);
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
