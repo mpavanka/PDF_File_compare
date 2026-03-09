@@ -334,13 +334,19 @@ def main():
         print("\n  Compare two folders:")
         print("    python pdf_compare.py folder1 folder2 [match_mode] [output.html]")
         print("\nMatch Modes:")
-        print("  exact      - Only files with exact matching names")
-        print("  smart      - Fuzzy matching of similar names (default)")
+        print("  exact      - Only files with 100% identical names (case-sensitive)")
+        print("  strict     - Case-insensitive matching (RECOMMENDED)")
+        print("               Example: 'File.pdf' = 'file.pdf' ✅")
+        print("                        'File.pdf' ≠ 'File_.pdf' ❌")
+        print("  smart      - Fuzzy matching 95%+ similar names + normalization")
         print("  positional - Match by position (1st with 1st, etc.)")
         print("  all        - Compare every file with every other file")
+        print("\n💡 Recommended for different file counts (e.g., 5000 vs 91):")
+        print("  Use 'strict' for case differences or 'exact' for identical names")
         print("\nExamples:")
         print("  python pdf_compare.py report1.pdf report2.pdf comparison.html")
-        print("  python pdf_compare.py ./old ./new smart summary.html")
+        print("  python pdf_compare.py ./expected ./actual strict summary.html")
+        print("  python pdf_compare.py ./old ./new exact summary.html")
         sys.exit(1)
     
     orchestrator = PDFComparisonOrchestrator()
@@ -379,7 +385,7 @@ def main():
         output = "batch_summary.html"
 
         if len(sys.argv) >= 4:
-            if sys.argv[3].lower() in ['exact', 'smart', 'positional', 'all']:
+            if sys.argv[3].lower() in ['exact', 'strict', 'smart', 'positional', 'all']:
                 match_mode = sys.argv[3].lower()
                 if len(sys.argv) >= 5:
                     output = sys.argv[4]

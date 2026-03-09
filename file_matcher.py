@@ -15,6 +15,7 @@ class FileMatcher:
     def __init__(self):
         self.match_strategies = {
             'exact': self._match_exact,
+            'strict': self._match_strict,
             'smart': self._match_smart,
             'positional': self._match_positional,
             'all': self._match_all
@@ -67,13 +68,159 @@ class FileMatcher:
         
         common_names = set(files1_dict.keys()) & set(files2_dict.keys())
         
+        print(f"\n📁 Folder 1: {len(files1)} files")
+        print(f"📁 Folder 2: {len(files2)} files")
+        print(f"\n🔍 Exact name matching...\n")
+        
         matches = []
         for name in sorted(common_names):
+            print(f"  ✅ {name}")
             matches.append((files1_dict[name], files2_dict[name]))
         
-        print(f"Exact matching: Found {len(matches)} matching file pairs")
+        # Show unmatched files
+        unmatched1 = set(files1_dict.keys()) - common_names
+        unmatched2 = set(files2_dict.keys()) - common_names
+        
+        if unmatched1:
+            print(f"\n⚠️  Files in Folder 1 with no match in Folder 2: {len(unmatched1)}")
+            for name in sorted(list(unmatched1)[:5]):
+                print(f"     ❌ {name}")
+            if len(unmatched1) > 5:
+                print(f"     ... and {len(unmatched1) - 5} more")
+        
+        if unmatched2:
+            print(f"\n⚠️  Files in Folder 2 with no match in Folder 1: {len(unmatched2)}")
+            for name in sorted(list(unmatched2)[:5]):
+                print(f"     ❌ {name}")
+            if len(unmatched2) > 5:
+                print(f"     ... and {len(unmatched2) - 5} more")
+        
+        print(f"\n{'='*80}")
+        print(f"📌 Found {len(matches)} matching file pairs")
+        print(f"{'='*80}\n")
         
         return matches
+    
+    def _match_strict(
+        self,
+        files1: List[Path],
+        files2: List[Path]
+    ) -> List[Tuple[Path, Path]]:
+        """
+        Match files ignoring ONLY case differences (keeps spaces, underscores, hyphens)
+        
+        Examples that match:
+        - "Client Report.pdf" ↔ "client report.pdf" ✅
+        - "File Name.pdf" ↔ "file name.pdf" ✅
+        - "Annual_Review.pdf" ↔ "annual_review.pdf" ✅
+        
+        Examples that DON'T match:
+        - "Client Report.pdf" ↔ "Client_Report.pdf" ❌ (different structure)
+        - "File Name.pdf" ↔ "FileName.pdf" ❌ (space vs no space)
+        
+        Args:
+            files1: List of files from folder 1
+            files2: List of files from folder 2
+            
+        Returns:
+            List of matching file pairs
+        """
+        files2_dict = {f.name: f for f in files2}
+        files2_lower_dict = {f.name.lower(): f.name for f in files2}
+        matched_files2 = set()
+        matches = []
+        exact_matches = 0
+        case_matches = 0
+        
+        print(f"\n📁 Folder 1: {len(files1)} files")
+        print(f"📁 Folder 2: {len(files2)} files")
+        print(f"\n🔍 Strict matching (case-insensitive only)...\n")
+        
+        for file1 in files1:
+            match_name = None
+            
+            # Try exact match first
+            if file1.name in files2_dict and file1.name not in matched_files2:
+                match_name = file1.name
+                print(f"  ✅ EXACT: {file1.name}")
+                exact_matches += 1
+            else:
+                # Try case-insensitive match
+                file1_lower = file1.name.lower()
+                if file1_lower in files2_lower_dict:
+                    match_name = files2_lower_dict[file1_lower]
+                    if match_name not in matched_files2:
+                        print(f"  🔄 CASE-INSENSITIVE: {file1.name}")
+                        if file1.name != match_name:
+                            print(f"                    ↔ {match_name}")
+                        case_matches += 1
+                    else:
+                        match_name = None
+            
+            if match_name:
+                matches.append((file1, files2_dict[match_name]))
+                matched_files2.add(match_name)
+            else:
+                print(f"  ❌ NO MATCH: {file1.name}")
+        
+        # Show unmatched files
+        unmatched1 = set(f.name for f in files1) - set(m[0].name for m in matches)
+        unmatched2 = set(files2_dict.keys()) - matched_files2
+        
+        if unmatched1 and len(unmatched1) <= 10:
+            print(f"\n⚠️  Unmatched in Folder 1: {len(unmatched1)}")
+            for name in sorted(unmatched1):
+                print(f"     ❌ {name}")
+        elif unmatched1:
+            print(f"\n⚠️  Unmatched in Folder 1: {len(unmatched1)} files")
+        
+        if unmatched2 and len(unmatched2) <= 10:
+            print(f"\n⚠️  Unmatched in Folder 2: {len(unmatched2)}")
+            for name in sorted(unmatched2):
+                print(f"     ❌ {name}")
+        elif unmatched2:
+            print(f"\n⚠️  Unmatched in Folder 2: {len(unmatched2)} files")
+        
+        print(f"\n{'='*80}")
+        print(f"📊 MATCHING SUMMARY:")
+        print(f"{'='*80}")
+        print(f"✅ Exact matches:            {exact_matches}")
+        print(f"🔄 Case-insensitive matches: {case_matches}")
+        print(f"📌 Total matched:            {len(matches)}")
+        print(f"{'='*80}\n")
+        
+        if case_matches > 0:
+            print(f"ℹ️  {case_matches} files matched with different case")
+            print(f"   (e.g., 'File.pdf' = 'file.pdf')\n")
+        
+        return matches
+    
+    def _normalize_filename(self, filename: str) -> str:
+        """
+        Normalize filename for comparison by removing spaces, underscores, hyphens
+        and converting to lowercase
+        
+        Args:
+            filename: Original filename
+            
+        Returns:
+            Normalized filename for comparison
+        """
+        # Remove extension for comparison
+        name_without_ext = filename.rsplit('.', 1)[0] if '.' in filename else filename
+        
+        # Convert to lowercase and remove spaces, underscores, hyphens
+        normalized = name_without_ext.lower()
+        normalized = normalized.replace(' ', '')
+        normalized = normalized.replace('_', '')
+        normalized = normalized.replace('-', '')
+        
+        # Add back extension
+        ext = filename.rsplit('.', 1)[1] if '.' in filename else ''
+        if ext:
+            normalized = normalized + '.' + ext.lower()
+        
+        return normalized
     
     def _match_smart(
         self,
@@ -81,7 +228,8 @@ class FileMatcher:
         files2: List[Path]
     ) -> List[Tuple[Path, Path]]:
         """
-        Match files using fuzzy name matching
+        Match files using fuzzy name matching with very high accuracy (95%+)
+        Also tries normalized matching (ignoring spaces, case, underscores)
         
         Args:
             files1: List of files from folder 1
@@ -93,24 +241,79 @@ class FileMatcher:
         files2_dict = {f.name: f for f in files2}
         matched_files2 = set()
         matches = []
+        exact_matches = 0
+        normalized_matches = 0
+        fuzzy_matches = 0
+        no_matches = 0
+        
+        print(f"\n📁 Folder 1: {len(files1)} files")
+        print(f"📁 Folder 2: {len(files2)} files")
+        print(f"\n🔍 Matching files (95%+ similarity required)...\n")
         
         for file1 in files1:
-            # Try exact match first
+            match_name = None
+            match_type = None
+            
+            # Try 1: Exact match
             if file1.name in files2_dict:
                 match_name = file1.name
-            else:
-                # Try fuzzy matching
-                available = [name for name in files2_dict.keys() if name not in matched_files2]
-                match_name = self._find_similar_filename(file1.name, available)
+                match_type = "EXACT"
+                exact_matches += 1
             
+            # Try 2: Normalized match (ignore spaces, case, underscores, hyphens)
+            elif not match_name:
+                normalized1 = self._normalize_filename(file1.name)
+                for name2 in files2_dict.keys():
+                    if name2 not in matched_files2:
+                        normalized2 = self._normalize_filename(name2)
+                        if normalized1 == normalized2:
+                            match_name = name2
+                            match_type = "NORMALIZED"
+                            normalized_matches += 1
+                            break
+            
+            # Try 3: High similarity fuzzy match (95%+)
+            if not match_name:
+                available = [name for name in files2_dict.keys() if name not in matched_files2]
+                match_name = self._find_similar_filename(file1.name, available, cutoff=0.95)
+                if match_name:
+                    match_type = "FUZZY"
+                    fuzzy_matches += 1
+            
+            # Record the match
             if match_name:
-                print(f"  Matched: {file1.name} ↔ {match_name}")
+                if match_type == "EXACT":
+                    print(f"  ✅ EXACT: {file1.name}")
+                elif match_type == "NORMALIZED":
+                    print(f"  🔄 NORMALIZED: {file1.name}")
+                    print(f"              ↔ {match_name}")
+                elif match_type == "FUZZY":
+                    print(f"  ⚠️  FUZZY (95%+): {file1.name}")
+                    print(f"                  ↔ {match_name}")
+                
                 matches.append((file1, files2_dict[match_name]))
                 matched_files2.add(match_name)
             else:
-                print(f"  No match found for: {file1.name}")
+                print(f"  ❌ NO MATCH: {file1.name}")
+                no_matches += 1
         
-        print(f"Smart matching: Found {len(matches)} matching file pairs")
+        print(f"\n{'='*80}")
+        print(f"📊 MATCHING SUMMARY:")
+        print(f"{'='*80}")
+        print(f"✅ Exact matches:       {exact_matches}")
+        print(f"🔄 Normalized matches:  {normalized_matches} (spaces/case differences)")
+        print(f"⚠️  Fuzzy matches:       {fuzzy_matches} (95%+ similar)")
+        print(f"❌ No matches:          {no_matches}")
+        print(f"📌 Total matched:       {len(matches)}")
+        print(f"{'='*80}\n")
+        
+        if normalized_matches > 0:
+            print(f"ℹ️  INFO: {normalized_matches} files matched after normalizing spaces/case/underscores")
+            print(f"   Example: 'File Name.pdf' matches 'File_Name.pdf' or 'filename.pdf'\n")
+        
+        if fuzzy_matches > 0:
+            print(f"⚠️  WARNING: {fuzzy_matches} files matched by high similarity (95%+)")
+            print(f"   Review the fuzzy matches above to verify they're correct!\n")
         
         return matches
     
