@@ -2,8 +2,10 @@
 PDF Extractor Module
 
 Handles extraction of text, tables, and metadata from PDF files
+Includes automatic space restoration for malformed PDFs
 """
 
+import re
 from pathlib import Path
 from typing import Dict, List, Any
 
@@ -23,12 +25,21 @@ except ImportError:
 class PDFExtractor:
     """Extract content from PDF files"""
     
-    def __init__(self, pdf_path: Path):
+    def __init__(self, pdf_path: Path, fix_spaces: bool = True):
+        """
+        Initialize PDF extractor
+        
+        Args:
+            pdf_path: Path to PDF file
+            fix_spaces: If True, attempts to restore missing spaces in extracted text
+        """
         self.pdf_path = Path(pdf_path)
+        self.fix_spaces = fix_spaces
         
     def extract_text_lines(self) -> Dict[int, List[str]]:
         """
         Extract text from PDF as lines, organized by page
+        Includes space restoration for malformed PDFs
         
         Returns:
             Dict mapping page numbers to lists of text lines
@@ -42,6 +53,9 @@ class PDFExtractor:
                     text = page.extract_text()
                     if text:
                         lines = [line.strip() for line in text.split('\n') if line.strip()]
+                        # Fix missing spaces in extracted text if enabled
+                        if self.fix_spaces:
+                            lines = [self._fix_missing_spaces(line) for line in lines]
                         page_lines[i] = lines
                     else:
                         page_lines[i] = []
@@ -52,6 +66,71 @@ class PDFExtractor:
             
         return page_lines
     
+    def _fix_missing_spaces(self, text: str) -> str:
+        """
+        Fix missing spaces in extracted text
+        
+        Handles cases like:
+        - "Motivated anddetail-oriented" -> "Motivated and detail-oriented"
+        - "postgraduatewith" -> "postgraduate with"
+        - "Chemistry postgraduate" (already correct, don't change)
+        
+        Args:
+            text: Text with potential missing spaces
+            
+        Returns:
+            Text with spaces restored where likely missing
+        """
+        import re
+        
+        # Pattern 1: Fix lowercase-to-uppercase transitions (camelCase)
+        # "detailOriented" -> "detail Oriented"
+        text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+        
+        # Pattern 2: Fix common word concatenations
+        # Define common words that often get concatenated
+        # Sort by length (longest first) to avoid partial replacements
+        common_words = sorted([
+            # Common connecting words
+            'and', 'the', 'with', 'for', 'from', 'that', 'this', 'have', 'has',
+            'are', 'were', 'was', 'been', 'will', 'can', 'could', 'would', 'should',
+            'but', 'not', 'all', 'when', 'which', 'who', 'where',
+            # Common descriptive words
+            'detail', 'oriented', 'based', 'focused', 'driven', 'minded',
+            'working', 'thinking', 'skills', 'experience', 'background',
+            # Education/professional words
+            'postgraduate', 'undergraduate', 'graduate', 'professional',
+            'chemistry', 'physics', 'biology', 'science', 'engineering'
+        ], key=len, reverse=True)
+        
+        # Fix concatenated common words
+        # Pattern: word boundary + lowercase letter(s) + common word
+        for word in common_words:
+            # Look for patterns where a word is concatenated without space
+            # Example: "anddetail" -> "and detail"
+            
+            # Before the word (something concatenated before it)
+            pattern = r'([a-z])(' + re.escape(word) + r')(?=[\s\-.,;:]|$)'
+            text = re.sub(pattern, r'\1 \2', text, flags=re.IGNORECASE)
+            
+            # After the word (word concatenated with something after)
+            pattern = r'(?:^|[\s\-.,;:])(' + re.escape(word) + r')([a-z])'
+            text = re.sub(pattern, r'\1 \2', text, flags=re.IGNORECASE)
+        
+        # Pattern 3: Fix specific problematic patterns we've seen
+        # "anddetail-oriented" type issues
+        fixes = {
+            r'anddetail': 'and detail',
+            r'withexperience': 'with experience',
+            r'postgraduatewith': 'postgraduate with',
+            r'chemistrypostgraduate': 'chemistry postgraduate'
+        }
+        
+        for pattern, replacement in fixes.items():
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        
+        return text
+    
     def _extract_with_pypdf(self) -> Dict[int, List[str]]:
         """Fallback extraction using pypdf"""
         page_lines = {}
@@ -61,6 +140,9 @@ class PDFExtractor:
                 text = page.extract_text()
                 if text:
                     lines = [line.strip() for line in text.split('\n') if line.strip()]
+                    # Fix missing spaces in extracted text if enabled
+                    if self.fix_spaces:
+                        lines = [self._fix_missing_spaces(line) for line in lines]
                     page_lines[i] = lines
                 else:
                     page_lines[i] = []
