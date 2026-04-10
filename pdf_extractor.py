@@ -39,7 +39,6 @@ class PDFExtractor:
     def extract_text_lines(self) -> Dict[int, List[str]]:
         """
         Extract text from PDF as lines, organized by page
-        Includes space restoration for malformed PDFs
         
         Returns:
             Dict mapping page numbers to lists of text lines

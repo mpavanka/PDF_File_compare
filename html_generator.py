@@ -359,7 +359,7 @@ class HTMLReportGenerator:
         return html
     
     def _build_detailed_differences(self, result: Dict, idx: int) -> str:
-        """Build detailed line-by-line differences with unified scrolling (filters out None/empty lines)"""
+        """Build detailed line-by-line differences with unified scrolling"""
         html = '<div class="detail-container">'
         
         # Header with simplified controls
@@ -383,32 +383,32 @@ class HTMLReportGenerator:
         
         for page_data in result.get('page_comparisons', []):
             page_num = page_data['page_num']
-            page_has_content = False
-            page_html = f'<div class="page-header">Page {page_num}</div>'
-            content_html = ''
+            html += f'<div class="page-header">Page {page_num}</div>'
             
             for diff in page_data.get('diff_data', []):
                 line_type = diff['type']
                 left_num = diff.get('left_line', '')
                 left_text = diff.get('left_text', '').strip()
                 
-                # Skip lines that are empty, whitespace-only, or just "None"
+                # Skip lines that are empty or just "None"
                 if not left_text or left_text.lower() == 'none':
                     continue
                 
-                page_has_content = True
                 escaped_text = self._escape_html(left_text)
+                
+                # For changed lines, highlight character differences in red
+                if line_type == 'changed':
+                    right_text_raw = diff.get('right_text', '').strip()
+                    if right_text_raw:
+                        escaped_text = self._highlight_char_diff(left_text, right_text_raw)
+                
                 extra_class = 'equal-line' if line_type == 'equal' else ''
                 display_style = 'display:none;' if line_type == 'equal' else ''
                 
-                content_html += f'<div class="diff-line {line_type} {extra_class}" style="{display_style}">'
-                content_html += f'<span class="line-num">{left_num}</span>'
-                content_html += f'<span class="line-text">{escaped_text}</span>'
-                content_html += '</div>'
-            
-            # Only add page if it has actual content
-            if page_has_content:
-                html += page_html + content_html
+                html += f'<div class="diff-line {line_type} {extra_class}" style="{display_style}">'
+                html += f'<span class="line-num">{left_num}</span>'
+                html += f'<span class="line-text">{escaped_text}</span>'
+                html += '</div>'
         
         html += '</div></div>'  # Close left side
         
@@ -419,32 +419,32 @@ class HTMLReportGenerator:
         
         for page_data in result.get('page_comparisons', []):
             page_num = page_data['page_num']
-            page_has_content = False
-            page_html = f'<div class="page-header">Page {page_num}</div>'
-            content_html = ''
+            html += f'<div class="page-header">Page {page_num}</div>'
             
             for diff in page_data.get('diff_data', []):
                 line_type = diff['type']
                 right_num = diff.get('right_line', '')
                 right_text = diff.get('right_text', '').strip()
                 
-                # Skip lines that are empty, whitespace-only, or just "None"
+                # Skip lines that are empty or just "None"
                 if not right_text or right_text.lower() == 'none':
                     continue
                 
-                page_has_content = True
                 escaped_text = self._escape_html(right_text)
+                
+                # For changed lines, highlight character differences in red
+                if line_type == 'changed':
+                    left_text_raw = diff.get('left_text', '').strip()
+                    if left_text_raw:
+                        escaped_text = self._highlight_char_diff(right_text, left_text_raw)
+                
                 extra_class = 'equal-line' if line_type == 'equal' else ''
                 display_style = 'display:none;' if line_type == 'equal' else ''
                 
-                content_html += f'<div class="diff-line {line_type} {extra_class}" style="{display_style}">'
-                content_html += f'<span class="line-num">{right_num}</span>'
-                content_html += f'<span class="line-text">{escaped_text}</span>'
-                content_html += '</div>'
-            
-            # Only add page if it has actual content
-            if page_has_content:
-                html += page_html + content_html
+                html += f'<div class="diff-line {line_type} {extra_class}" style="{display_style}">'
+                html += f'<span class="line-num">{right_num}</span>'
+                html += f'<span class="line-text">{escaped_text}</span>'
+                html += '</div>'
         
         html += '</div></div>'  # Close right side
         html += '</div>'  # Close unified-comparison
@@ -563,6 +563,39 @@ class HTMLReportGenerator:
 </html>
 """
     
+    def _highlight_char_diff(self, text1: str, text2: str) -> str:
+        """
+        Highlight character-level differences in red
+        
+        Args:
+            text1: First text to compare
+            text2: Second text to compare
+            
+        Returns:
+            HTML with red highlighting on different characters
+        """
+        import difflib
+        
+        # Use difflib to find character differences
+        matcher = difflib.SequenceMatcher(None, text1, text2)
+        result = []
+        
+        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+            if tag == 'equal':
+                # Characters are the same
+                result.append(self._escape_html(text1[i1:i2]))
+            elif tag == 'replace':
+                # Characters changed - mark in red
+                result.append(f'<mark class="char-diff">{self._escape_html(text1[i1:i2])}</mark>')
+            elif tag == 'delete':
+                # Characters deleted - mark in red with strikethrough
+                result.append(f'<mark class="char-diff deleted">{self._escape_html(text1[i1:i2])}</mark>')
+            elif tag == 'insert':
+                # Characters added - show as green (only on right side)
+                pass  # Don't show insertions on left side
+        
+        return ''.join(result)
+    
     def _escape_html(self, text: str) -> str:
         """Escape HTML special characters"""
         if not text:
@@ -649,6 +682,36 @@ class HTMLReportGenerator:
         .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; }
         .status-badge.identical { background: #d1fae5; color: #065f46; }
         .status-badge.different { background: #fee2e2; color: #991b1b; }
+        
+        /* STRONG RED highlighting for rows with differences - very visible! */
+        .result-row.different { 
+            background-color: #fca5a5; 
+            border-left: 5px solid #dc2626; 
+            box-shadow: 0 0 0 1px #fca5a5;
+        }
+        .result-row.different:hover { 
+            background-color: #f87171; 
+            box-shadow: 0 0 8px rgba(220, 38, 38, 0.3);
+        }
+        .result-row.identical { 
+            background-color: #d1fae5; 
+            border-left: 5px solid #10b981; 
+        }
+        .result-row.identical:hover { 
+            background-color: #a7f3d0; 
+        }
+        
+        /* Make difference counts bold and red in mismatch rows */
+        .result-row.different .diff-count { font-weight: 700; color: #991b1b; }
+        
+        /* Make "Different" badge more prominent */
+        .result-row.different .status-badge { 
+            background: #dc2626; 
+            color: white; 
+            font-weight: 700; 
+            padding: 6px 12px;
+            border-radius: 4px;
+        }
         .status-badge.missing { background: #fef3c7; color: #92400e; }
         .diff-count { font-weight: 600; }
         .diff-count.zero { color: #10b981; }
@@ -688,5 +751,11 @@ class HTMLReportGenerator:
         .diff-line.equal { background: white; border-left: 3px solid transparent; }
         .line-num { width: 50px; padding: 0 10px; text-align: right; color: #6b7280; font-weight: 600; flex-shrink: 0; background: rgba(249,250,251,0.8); font-size: 11px; }
         .line-text { padding: 0 15px; flex: 1; word-break: break-word; white-space: pre-wrap; }
+        
+        /* Red text highlighting for character differences */
+        .char-diff {
+            color: #dc2626;
+            font-weight: 700;
+        }
     </style>
 """

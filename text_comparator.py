@@ -12,12 +12,14 @@ from typing import List, Dict, Tuple
 class TextComparator:
     """Compare text content between two sources"""
     
-    def __init__(self, store_equal_lines=False):
+    def __init__(self, store_equal_lines=False, split_sentences=True, max_line_length=200):
         """
         Initialize comparator
         
         Args:
             store_equal_lines: If False, skips storing equal lines (saves 70%+ memory)
+            split_sentences: If True, splits long lines into sentences for better comparison
+            max_line_length: Lines longer than this will be split into sentences
         """
         self.stats = {
             'lines_added': 0,
@@ -26,10 +28,52 @@ class TextComparator:
             'total_differences': 0
         }
         self.store_equal_lines = store_equal_lines
+        self.split_sentences = split_sentences
+        self.max_line_length = max_line_length
+    
+    def _split_into_sentences(self, lines: List[str]) -> List[str]:
+        """
+        Split long lines into sentences for better comparison
+        
+        Args:
+            lines: List of text lines (may include long paragraphs)
+            
+        Returns:
+            List with long lines split into sentences
+        """
+        if not self.split_sentences:
+            return lines
+        
+        result = []
+        for line in lines:
+            # If line is short enough, keep as-is
+            if len(line) <= self.max_line_length:
+                result.append(line)
+                continue
+            
+            # Split long line into sentences
+            import re
+            
+            # Better sentence splitting:
+            # Split on . ! ? followed by space and capital letter or end of string
+            # This avoids splitting on abbreviations like "Mr." or "Dr."
+            sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z])', line)
+            
+            # Also handle end of line
+            final_sentences = []
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if sentence:
+                    final_sentences.append(sentence)
+            
+            result.extend(final_sentences)
+        
+        return result
     
     def compare_lines(self, lines1: List[str], lines2: List[str]) -> List[Dict]:
         """
         Compare two lists of text lines
+        Automatically splits long paragraphs into sentences for better comparison
         
         Args:
             lines1: Lines from first document
@@ -38,6 +82,10 @@ class TextComparator:
         Returns:
             List of diff data dictionaries with type, line numbers, and text
         """
+        # Split long lines into sentences for better comparison
+        lines1 = self._split_into_sentences(lines1)
+        lines2 = self._split_into_sentences(lines2)
+        
         matcher = difflib.SequenceMatcher(None, lines1, lines2)
         diff_data = []
         
